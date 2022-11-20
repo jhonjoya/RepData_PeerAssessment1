@@ -7,8 +7,43 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r loadingData, echo=TRUE}
+if(!file.exists("activity.csv")){
+      unzip("activity.zip")
+}
+activity <- read.csv("activity.csv")
+convertHour <- function(timelapse){
+      if(timelapse < 100){
+            if(timelapse < 10){
+                  hour <- paste("00:0", timelapse, sep = "")
+            }
+            else{
+                  hour <- paste("00:", timelapse, sep = "")
+            }
+      }else{
+            intHour <- as.integer(timelapse/100)
+            intMinutes <- timelapse%%100
+            if(intHour < 10){
+                  if(intMinutes < 10){
+                        hour <- paste("0",intHour,":0",intMinutes, sep = "")
+                  }else{
+                        hour <- paste("0",intHour,":",intMinutes, sep = "")
+                  }
+            }else{
+                  if(intMinutes < 10){
+                        hour <- paste("",intHour,":0",intMinutes, sep = "")
+                  }else{
+                        hour <- paste("",intHour,":",intMinutes, sep = "")
+                  }
+            }
+      }
+      hour
+}
+hour <- sapply(activity$interval, FUN = convertHour)
+activity2 <- activity[,1]
+activity2$timestamp <- as.POSIXct(paste(activity$date,hour, sep = " "))
 
-
+```
 
 ## What is mean total number of steps taken per day?
 
