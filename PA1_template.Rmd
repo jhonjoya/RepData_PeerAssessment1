@@ -8,53 +8,93 @@ output:
 
 ## Loading and preprocessing the data
 ```{r loadingData, echo=TRUE}
+library(dplyr)
+library(lubridate)
+
 if(!file.exists("activity.csv")){
-      unzip("activity.zip")
+        unzip("activity.zip")
 }
 activity <- read.csv("activity.csv")
-convertHour <- function(timelapse){
-      if(timelapse < 100){
-            if(timelapse < 10){
-                  hour <- paste("00:0", timelapse, sep = "")
-            }
-            else{
-                  hour <- paste("00:", timelapse, sep = "")
-            }
-      }else{
-            intHour <- as.integer(timelapse/100)
-            intMinutes <- timelapse%%100
-            if(intHour < 10){
-                  if(intMinutes < 10){
-                        hour <- paste("0",intHour,":0",intMinutes, sep = "")
-                  }else{
-                        hour <- paste("0",intHour,":",intMinutes, sep = "")
-                  }
-            }else{
-                  if(intMinutes < 10){
-                        hour <- paste("",intHour,":0",intMinutes, sep = "")
-                  }else{
-                        hour <- paste("",intHour,":",intMinutes, sep = "")
-                  }
-            }
-      }
-      hour
-}
-hour <- sapply(activity$interval, FUN = convertHour)
-activity2 <- activity[,1]
-activity2$timestamp <- as.POSIXct(paste(activity$date,hour, sep = " "))
-
 ```
 
 ## What is mean total number of steps taken per day?
+```{r totalSteps}
+daily_counts <-  activity %>%
+        mutate(date_by_day = date(date)) %>%
+        group_by(date_by_day) %>%
+        summarize(steps = sum(steps, na.rm = TRUE))
+```
+Histogram for steps per day
+```{r histogramOfSteps}
+hist(daily_counts$steps, xlab = "Number of steps")
+```
 
+The mean of the daily steps is
+```{r meanSteps}
+mean(daily_counts$steps)
+```
 
+The median of the daily steps is
+```{r medianSteps}
+median(daily_counts$steps)
+```
 
 ## What is the average daily activity pattern?
-
-
+```{r averageSteps}
+daily_average <-  activity %>%
+        mutate(date_by_day = date(date)) %>%
+        group_by(date_by_day) %>%
+        summarize(avgSteps = mean(steps, na.rm = TRUE))
+daily_average <- daily_average[!is.na(daily_average$avgSteps),]
+plot(daily_average$date_by_day, daily_average$avgSteps, main = "Average steps by day", xlab = "day", ylab = "average steps", type = "l")
+abline(v=daily_average[daily_average$avgSteps == max(daily_average$avgSteps, na.rm = TRUE),"date_by_day"], col = "red")
+```
 
 ## Imputing missing values
+The total missing values in the dataset are:
+```{r naValues}
+sum(is.na(activity$steps))
+```
+Filling the missing values
+```{r fillingValues}
+activity2 <- activity[, c(1, 2)]
+activity2$steps <- ifelse(is.na(activity2$steps), 0, activity2$steps)
+head(activity2)
+```
 
+Calculating the total steps per day and compare with the mean and the median
+```{r histogramData}
+daily_counts2 <-  activity2 %>%
+        mutate(date_by_day = date(date)) %>%
+        group_by(date_by_day) %>%
+        summarize(steps = sum(steps, na.rm = TRUE))
+
+daily_average2 <-  activity2 %>%
+        mutate(date_by_day = date(date)) %>%
+        group_by(date_by_day) %>%
+        summarize(avgSteps = mean(steps, na.rm = TRUE))
+
+daily_median2 <-  activity2 %>%
+        mutate(date_by_day = date(date)) %>%
+        group_by(date_by_day) %>%
+        summarize(medianSteps = median(steps, na.rm = TRUE))
+par(mfrow = c(1,3))
+hist(daily_counts2$steps, col = "red")
+hist(daily_average2$avgSteps, col = "blue")
+hist(daily_median2$medianSteps, col = "green")
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r weekdays}
+activity2$weekday <- ifelse(weekdays(date(activity2$date))=="Monday" | weekdays(date(activity2$date))=="Tuesday" | weekdays(date(activity2$date))=="Wednesday" | weekdays(date(activity2$date))=="Thursday" | weekdays(date(activity2$date))=="Friday", "weekday", "weekend")
+
+average_weekday <- activity2 %>%
+        group_by(weekday) %>%
+        summarize(avgSteps = mean(steps, na.rm = TRUE))
+
+plot(date(activity2$date), activity2$steps, type = "l")
+abline(h=average_weekday$avgSteps[1], col = "red")
+abline(h=average_weekday$avgSteps[2], col = "blue")
+
+```
